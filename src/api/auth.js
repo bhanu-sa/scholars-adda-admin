@@ -8,7 +8,7 @@ export const sendOtp = async (email) => {
 };
 
 export const verifyOtp = async (identifier, otp) => {
-  const res = await api.get(`/verifyLoginOtp`, {
+  const res = await api.get(`/verifyLoginOtpa`, {
     params: { identifier, otp },
   });
   return res.data;
