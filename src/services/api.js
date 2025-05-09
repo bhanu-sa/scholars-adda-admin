@@ -154,6 +154,46 @@ export const getAllExams = async () => {
   }
 };
 
+
+
+// Question APIs
+export const addQuestion = async (examId, questionData) => {
+  try {
+    const response = await api.post(`/admin/exam/addQuestion?exam_id=${examId}`, questionData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const updateQuestion = async (questionId, questionData) => {
+  try {
+    const response = await api.put(`/admin/exam/updateQuestion?id=${questionId}`, questionData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteQuestion = async (questionId) => {
+  try {
+    const response = await api.delete(`/admin/exam/deleteQuestion?id=${questionId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getExamQuestions = async (examId) => {
+  try {
+    const response = await api.get(`/admin/exam/getExamQuestions?exam_id=${examId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 // export const createExam = async (examData) => {
 //   const payload = {
 //     ...examData,

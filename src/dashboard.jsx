@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import { getCurrentUser } from './services/api';
 import AssessmentManagement from './pages/AssessmentManagement';
-
+import QuestionManagement from './pages/QuestionManagement';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -33,12 +33,15 @@ const Dashboard = () => {
   const menuItems = [
     { id: 'users', label: 'User Management' },
     { id: 'assessments', label: 'Assessment Management' },
+    { id: 'questions', label: 'Question Management' }, // ✅ added this
   ];
 
   const renderContent = () => {
     switch (activeMenu) {
       case 'assessments':
         return <AssessmentManagement />;
+      case 'questions':
+        return <QuestionManagement />;  // ✅ added this
       case 'users':
         return <div>User Management Content</div>;
       default:
@@ -60,7 +63,7 @@ const Dashboard = () => {
               onClick={() => setActiveMenu(item.id)}
               className={`flex items-center w-full px-4 py-2 text-gray-700 ${
                 activeMenu === item.id
-                  ? 'bg-orange-50 text-orange-600'
+                  ? 'bg-orange-50 text-orange-600 font-semibold'
                   : 'hover:bg-orange-50 hover:text-orange-600'
               }`}
             >
@@ -83,7 +86,7 @@ const Dashboard = () => {
           <div>
             <p className="text-gray-600">admin: {user?.email || 'Loading...'}</p>
           </div>
-          <div className="flex items-center space-x-4 ">
+          <div className="flex items-center space-x-4">
             <input
               type="text"
               placeholder="Search..."
@@ -96,7 +99,7 @@ const Dashboard = () => {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto p-6">
           {renderContent()}
         </main>
       </div>
