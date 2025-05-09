@@ -1,21 +1,37 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import toast from 'react-hot-toast';
+import { validateEmail } from '../utills/validation';
+import { sendOtp } from '../services/api';
 import saLogo from '../assets/sa-logo.svg';
 import saWel from '../assets/sa-wel.svg';
 import saName from '../assets/sa-name.svg';
 
 const OtpLogin = () => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
+  // ✅ define version here (set it to backend-required value)
+  const version = '2.4.9'; // ← replace this with the correct version string
+
   const handleSendOtp = async () => {
+    if (!validateEmail(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      await axios.get(`/genEmailLoginOtp?email=${email}`);
+      // ✅ pass version along with email
+      await sendOtp(email, version);
       localStorage.setItem('email', email);
+      toast.success('OTP sent successfully');
       navigate('/otp');
     } catch (err) {
-      alert('Failed to send OTP');
+      toast.error(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -33,14 +49,15 @@ const OtpLogin = () => {
             placeholder="Enter email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
 
           <button
             onClick={handleSendOtp}
-            className="w-full bg-[#FC7614] hover:bg-orange-700 text-white py-3 rounded-lg text-base font-semibold"
+            disabled={isLoading}
+            className="w-full bg-[#FC7614] hover:bg-orange-700 text-white py-3 rounded-lg text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send OTP
+            {isLoading ? 'Sending...' : 'Send OTP'}
           </button>
         </div>
       </div>
