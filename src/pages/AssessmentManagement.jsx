@@ -1,4 +1,4 @@
-;
+
 import React, { useEffect, useState } from 'react';
 import useExamStore from '../store/examStore';
 import ExamForm from '../components/assessments/AssessmentList';
@@ -12,9 +12,10 @@ const AssessmentManagement = () => {
     fetchAllExams();
   }, []);
 
-  const handleCreateExam = async (data) => {
+  const handleCreateExam = async (examData) => {
     try {
-      await createNewExam(data);
+      // debugger
+      await createNewExam(examData);
       setShowForm(false);
     } catch (error) {
       console.error('Failed to create exam:', error);

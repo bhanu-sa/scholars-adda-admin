@@ -1,5 +1,6 @@
 import axios from 'axios';
 import useAuthStore from '../store/authStore';
+import { convertToSnakeCase } from '../utills/caseConverter';
 
 const api = axios.create({
   baseURL: 'http://sa-back/api/v1',
@@ -100,23 +101,66 @@ export const getCurrentUser = async () => {
 
 
 
+// export const createExam = async (examData) => {
+//   try {
+//     const payload = {
+//       ...examData,
+//       publishedAt: examData.publishedAt || new Date().toISOString(),
+//       resultDeclared: false,
+//       evaluation: false,
+//       enrolledStudents: [],
+//       excel: "",
+//       questions: [],
+//       commonId: "",
+//     };
+
+//     const response = await api.post('/admin/exam/create', payload);
+//     return response.data;
+//   } catch (error) {
+//     console.error('API Error:', error?.response?.data || error.message);
+//     throw error;
+//   }
+// };
+
+function objectToFormData(obj) {
+  const formData = new FormData();
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      formData.append(key, obj[key]);
+    }
+  }
+  return formData;
+}
 export const createExam = async (examData) => {
   try {
-    const response = await api.post('/admin/exam/create', {
-      ...examData,
-      published_at: new Date().toISOString(),
-      result_declared: false,
+    const snakeCaseData = examData;
+    const payload = {
+      ...snakeCaseData,
+      publishedAt: snakeCaseData.published_at || new Date().toISOString(),
+      resultDeclared: false,
       evaluation: false,
-      enrolled_students: null,
+      enrolledStudents: [],
       excel: "",
       questions: null,
-      common_id: "",
+      commonId: "",
+    };
+
+    // const response = await api.post('/admin/exam/create', payload);
+        const formData = objectToFormData(payload);
+
+    const response = await api.post('/admin/exam/create', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
     return response.data;
   } catch (error) {
+    console.error('API Error:', error?.response?.data || error.message);
     throw error;
   }
 };
+
+
 
 export const updateExam = async (examId, examData) => {
   try {
