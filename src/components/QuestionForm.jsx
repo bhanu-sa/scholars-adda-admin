@@ -18,13 +18,13 @@ const questionSchema = z.object({
 });
 
 function parseTranslations(translations) {
-  // If already an object, return as is
+
   if (!translations) return {
     Title: [{ 'hi-IN': '' }, { 'mr-IN': '' }],
     Explaination: [{ 'hi-IN': '' }, { 'mr-IN': '' }]
   };
   if (typeof translations === 'object') return translations;
-  // If base64, decode
+
   try {
     const binaryString = atob(translations);
     const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
@@ -84,7 +84,7 @@ const QuestionForm = ({ onSubmit, initialData }) => {
     defaultValues: editValues
   });
 
-  // Reset form when initialData changes (for editing)
+  
   useEffect(() => {
     reset(editValues);
   }, [initialData]);
@@ -112,7 +112,7 @@ const QuestionForm = ({ onSubmit, initialData }) => {
   };
 
   const handleFormSubmit = (data) => {
-    // Map answers: from indices to option texts or IDs (let parent handle mapping if needed)
+    
     if (onSubmit && typeof onSubmit === 'function') {
       onSubmit(data);
     }

@@ -60,7 +60,7 @@ const useExamStore = create((set) => ({
     try {
       set({ loading: true, error: null });
       const response = await getAllExams();
-      // Ensure we're setting an array, even if empty
+     
       const exams = Array.isArray(response) ? response : [];
       set({ exams, loading: false });
     } catch (error) {

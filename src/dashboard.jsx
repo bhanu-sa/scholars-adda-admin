@@ -33,7 +33,7 @@ const Dashboard = () => {
   const menuItems = [
     { id: 'users', label: 'User Management' },
     { id: 'assessments', label: 'Assessment Management' },
-    { id: 'questions', label: 'Question Management' }, // ✅ added this
+    { id: 'questions', label: 'Question Management' }, 
   ];
 
   const renderContent = () => {
@@ -41,7 +41,7 @@ const Dashboard = () => {
       case 'assessments':
         return <AssessmentManagement />;
       case 'questions':
-        return <QuestionManagement />;  // ✅ added this
+        return <QuestionManagement />;  
       case 'users':
         return <div>User Management Content</div>;
       default:

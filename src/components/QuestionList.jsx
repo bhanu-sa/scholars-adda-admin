@@ -5,7 +5,7 @@ const QuestionList = ({ questions, onEdit, onDelete }) => {
     return <div className="text-gray-500 text-center py-8">No questions found</div>;
   }
 
-  // Helper to decode base64 translations
+
   const decodeBase64 = (base64String) => {
     try {
       const binaryString = atob(base64String);
