@@ -1,11 +1,17 @@
 
 
-
 import { create } from 'zustand';
-import { addQuestion, updateQuestion, deleteQuestion, getExamQuestions } from '../services/api';;
+import {
+  addQuestion,
+  updateQuestion,
+  deleteQuestion,
+  getExamQuestions,
+  getQuestionOptions
+} from '../services/api';
 
-const useQuestionStore = create((set) => ({
+const useQuestionStore = create((set, get) => ({
   questions: [],
+  questionOptions: {},
   loading: false,
   error: null,
 
@@ -18,20 +24,31 @@ const useQuestionStore = create((set) => ({
     set({ loading: true, error: null });
     try {
       const response = await getExamQuestions(examId);
-      set({ questions: response, loading: false });
+      set({
+        questions: response,
+        loading: false
+      });
     } catch (error) {
       set({ error: error.message, loading: false });
     }
   },
 
   addNewQuestion: async (examId, questionData) => {
-    if (!examId) {
-      throw new Error('Exam ID is required');
-    }
-
+    if (!examId) throw new Error('Exam ID is required');
     set({ loading: true, error: null });
     try {
-      await addQuestion(examId, questionData);
+      const formattedData = {
+        title: questionData.title,
+        explaination: questionData.explaination || '',
+        tags: questionData.tags || '',
+        type: questionData.type,
+        objective: true,
+        options: questionData.options || [],
+        answers: questionData.answers || []
+      };
+
+      await addQuestion(examId, formattedData);
+      await get().fetchExamQuestions(examId);
       set({ loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -39,14 +56,15 @@ const useQuestionStore = create((set) => ({
     }
   },
 
-  updateQuestion: async (questionId, questionData) => {
-    if (!questionId) {
-      throw new Error('Question ID is required');
-    }
-
+  updateQuestion: async (id, questionData) => {
+    if (!id) throw new Error('Question ID is required');
     set({ loading: true, error: null });
     try {
-      await updateQuestion(questionId, questionData);
+      await updateQuestion(id, questionData);
+      const examId = get().questions[0]?.exam_id;
+      if (examId) {
+        await get().fetchExamQuestions(examId);
+      }
       set({ loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -55,13 +73,14 @@ const useQuestionStore = create((set) => ({
   },
 
   deleteQuestion: async (questionId) => {
-    if (!questionId) {
-      throw new Error('Question ID is required');
-    }
-
+    if (!questionId) throw new Error('Question ID is required');
     set({ loading: true, error: null });
     try {
       await deleteQuestion(questionId);
+      const examId = get().questions[0]?.exam_id;
+      if (examId) {
+        await get().fetchExamQuestions(examId);
+      }
       set({ loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });

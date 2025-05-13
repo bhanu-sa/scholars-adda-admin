@@ -1,104 +1,145 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 const questionSchema = z.object({
   title: z.string().min(1, 'Question title is required'),
-  type: z.string().default('mcq-sa'),
-  objective: z.boolean().default(true),
-  options: z.array(z.string()).min(4, 'Must provide 4 options'),
-  answers: z.array(z.number()).min(1, 'Must select at least one correct answer'),
-  explaination: z.string().min(1, 'Explanation is required'),
+  type: z.string().min(1, 'Question type is required'),
   tags: z.string().optional(),
+  objective: z.boolean().default(true),
+  options: z.array(z.string()).min(2, 'At least 2 options are required'),
+  answers: z.array(z.number()).min(1, 'At least one answer must be selected'),
+  explaination: z.string().optional(),
   translations: z.object({
-    Title: z.array(z.object({
-      'hi-IN': z.string(),
-      'mr-IN': z.string()
-    })),
-    Explaination: z.array(z.object({
-      'hi-IN': z.string(),
-      'mr-IN': z.string()
-    }))
+    Title: z.array(z.record(z.string())).optional(),
+    Explaination: z.array(z.record(z.string())).optional()
   }).optional()
 });
 
+function parseTranslations(translations) {
+  // If already an object, return as is
+  if (!translations) return {
+    Title: [{ 'hi-IN': '' }, { 'mr-IN': '' }],
+    Explaination: [{ 'hi-IN': '' }, { 'mr-IN': '' }]
+  };
+  if (typeof translations === 'object') return translations;
+  // If base64, decode
+  try {
+    const binaryString = atob(translations);
+    const bytes = Uint8Array.from(binaryString, c => c.charCodeAt(0));
+    const decodedString = new TextDecoder('utf-8').decode(bytes);
+    return JSON.parse(decodedString);
+  } catch {
+    return {
+      Title: [{ 'hi-IN': '' }, { 'mr-IN': '' }],
+      Explaination: [{ 'hi-IN': '' }, { 'mr-IN': '' }]
+    };
+  }
+}
 const QuestionForm = ({ onSubmit, initialData }) => {
+  // Prepare default values for the form
+  const defaultValues = {
+    title: '',
+    type: 'mcq-sa',
+    tags: '',
+    objective: true,
+    options: ['', '', '', ''],
+    answers: [],
+    explaination: '',
+    translations: {
+      Title: [{ 'hi-IN': '' }, { 'mr-IN': '' }],
+      Explaination: [{ 'hi-IN': '' }, { 'mr-IN': '' }]
+    }
+  };
+
+  // If editing, map question data to form fields
+  let editValues = defaultValues;
+  if (initialData) {
+    // Map options: from array of option objects to array of texts
+    const options = (initialData.options || []).map(opt => opt?.text || '');
+    // Map answers: from array of option IDs to array of option indices
+    const answers = (initialData.answers || []).map(answerId =>
+      initialData.options.findIndex(opt => opt?.id === answerId)
+    ).filter(idx => idx !== -1);
+
+    editValues = {
+      ...defaultValues,
+      ...initialData,
+      options,
+      answers,
+      translations: parseTranslations(initialData.translations)
+    };
+  }
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch
+    watch,
+    setValue,
+    reset
   } = useForm({
     resolver: zodResolver(questionSchema),
-    defaultValues: initialData || {
-      type: 'mcq-sa',
-      objective: true,
-      options: ['', '', '', ''],
-      answers: [],
-      translations: {
-        Title: [{
-          'hi-IN': '',
-          'mr-IN': ''
-        }],
-        Explaination: [{
-          'hi-IN': '',
-          'mr-IN': ''
-        }]
-      }
-    }
+    defaultValues: editValues
   });
 
+  // Reset form when initialData changes (for editing)
+  useEffect(() => {
+    reset(editValues);
+  }, [initialData]);
+
+  const options = watch('options') || [];
+  const answers = watch('answers') || [];
+  const type = watch('type');
+
+  const handleOptionChange = (index, value) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setValue('options', newOptions);
+  };
+
+  const handleAnswerToggle = (optionIndex) => {
+    if (type === 'mcq-sa') {
+      setValue('answers', [optionIndex]);
+    } else {
+      const currentAnswers = answers || [];
+      const newAnswers = currentAnswers.includes(optionIndex)
+        ? currentAnswers.filter(a => a !== optionIndex)
+        : [...currentAnswers, optionIndex];
+      setValue('answers', newAnswers);
+    }
+  };
+
   const handleFormSubmit = (data) => {
-    // Convert option strings to IDs (this would normally come from the backend)
-    const optionIds = data.options.map((_, index) => 1088 + index);
-    
-    const formattedData = {
-      ...data,
-      options: optionIds,
-      answers: [optionIds[0]], // Assuming first option is correct for now
-    };
-    
-    onSubmit(formattedData);
+    // Map answers: from indices to option texts or IDs (let parent handle mapping if needed)
+    if (onSubmit && typeof onSubmit === 'function') {
+      onSubmit(data);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700">Question Title</label>
-        <textarea
+        <input
+          type="text"
           {...register('title')}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          rows={3}
         />
         {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
       </div>
 
-      <div className="space-y-4">
-        <label className="block text-sm font-medium text-gray-700">Options</label>
-        {[0, 1, 2, 3].map((index) => (
-          <div key={index}>
-            <input
-              type="text"
-              {...register(`options.${index}`)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-              placeholder={`Option ${String.fromCharCode(65 + index)}`}
-            />
-            {errors.options?.[index] && (
-              <p className="text-red-500 text-sm">{errors.options[index].message}</p>
-            )}
-          </div>
-        ))}
-      </div>
-
       <div>
-        <label className="block text-sm font-medium text-gray-700">Explanation</label>
-        <textarea
-          {...register('explaination')}
+        <label className="block text-sm font-medium text-gray-700">Question Type</label>
+        <select
+          {...register('type')}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          rows={2}
-        />
-        {errors.explaination && <p className="text-red-500 text-sm">{errors.explaination.message}</p>}
+        >
+          <option value="mcq-sa">Single Answer MCQ</option>
+          <option value="mcq-ma">Multiple Answer MCQ</option>
+        </select>
+        {errors.type && <p className="text-red-500 text-sm">{errors.type.message}</p>}
       </div>
 
       <div>
@@ -107,47 +148,88 @@ const QuestionForm = ({ onSubmit, initialData }) => {
           type="text"
           {...register('tags')}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          placeholder="Enter tags separated by commas"
         />
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-900">Translations</h3>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Hindi Title</label>
-          <input
-            type="text"
-            {...register('translations.Title.0.hi-IN')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+        <div className="space-y-2">
+          {options.map((option, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <input
+                type={type === 'mcq-sa' ? 'radio' : 'checkbox'}
+                checked={answers && answers.includes(index)}
+                onChange={() => handleAnswerToggle(index)}
+                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"
+              />
+              <input
+                type="text"
+                value={option || ''}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                placeholder={`Option ${index + 1}`}
+              />
+            </div>
+          ))}
         </div>
+        {errors.options && <p className="text-red-500 text-sm">{errors.options.message}</p>}
+        {errors.answers && <p className="text-red-500 text-sm">{errors.answers.message}</p>}
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Marathi Title</label>
-          <input
-            type="text"
-            {...register('translations.Title.0.mr-IN')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Explanation</label>
+        <textarea
+          {...register('explaination')}
+          rows={3}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Hindi Explanation</label>
-          <input
-            type="text"
-            {...register('translations.Explaination.0.hi-IN')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Marathi Explanation</label>
-          <input
-            type="text"
-            {...register('translations.Explaination.0.mr-IN')}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-          />
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Translations</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Title Translations</label>
+            <div className="grid grid-cols-2 gap-4 mt-1">
+              <div>
+                <input
+                  type="text"
+                  {...register('translations.Title.0.hi-IN')}
+                  placeholder="Hindi"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  {...register('translations.Title.1.mr-IN')}
+                  placeholder="Marathi"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600">Explanation Translations</label>
+            <div className="grid grid-cols-2 gap-4 mt-1">
+              <div>
+                <input
+                  type="text"
+                  {...register('translations.Explaination.0.hi-IN')}
+                  placeholder="Hindi"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  {...register('translations.Explaination.1.mr-IN')}
+                  placeholder="Marathi"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -155,115 +237,10 @@ const QuestionForm = ({ onSubmit, initialData }) => {
         type="submit"
         className="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
       >
-        {initialData ? 'Update Question' : 'Add Question'}
+        {initialData ? 'Update Question' : 'Create Question'}
       </button>
     </form>
   );
 };
 
 export default QuestionForm;
-// import React from 'react';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { z } from 'zod';
-
-// const examSchema = z.object({
-//   title: z.string().min(1, 'Title is required'),
-//   description: z.string().min(1, 'Description is required'),
-//   duration: z.number().min(1, 'Duration must be at least 1 minute'),
-//   max_score: z.number().min(0, 'Max score cannot be negative'),
-//   passing_score: z.number().min(0, 'Passing score cannot be negative'),
-//   active: z.boolean().default(false)
-// });
-
-// const ExamForm = ({ onSubmit, initialData }) => {
-//   const {
-//     register,
-//     handleSubmit,
-//     formState: { errors }
-//   } = useForm({
-//     resolver: zodResolver(examSchema),
-//     defaultValues: initialData || {
-//       title: '',
-//       description: '',
-//       duration: 60,
-//       max_score: 100,
-//       passing_score: 60,
-//       active: false
-//     }
-//   });
-
-//   return (
-//     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-//       <div>
-//         <label className="block text-sm font-medium text-gray-700">Title</label>
-//         <input
-//           type="text"
-//           {...register('title')}
-//           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-//         />
-//         {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
-//       </div>
-
-//       <div>
-//         <label className="block text-sm font-medium text-gray-700">Description</label>
-//         <textarea
-//           {...register('description')}
-//           rows={3}
-//           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-//         />
-//         {errors.description && <p className="text-red-500 text-sm">{errors.description.message}</p>}
-//       </div>
-
-//       <div className="grid grid-cols-2 gap-4">
-//         <div>
-//           <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
-//           <input
-//             type="number"
-//             {...register('duration', { valueAsNumber: true })}
-//             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-//           />
-//           {errors.duration && <p className="text-red-500 text-sm">{errors.duration.message}</p>}
-//         </div>
-
-//         <div>
-//           <label className="block text-sm font-medium text-gray-700">Max Score</label>
-//           <input
-//             type="number"
-//             {...register('max_score', { valueAsNumber: true })}
-//             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-//           />
-//           {errors.max_score && <p className="text-red-500 text-sm">{errors.max_score.message}</p>}
-//         </div>
-//       </div>
-
-//       <div>
-//         <label className="block text-sm font-medium text-gray-700">Passing Score</label>
-//         <input
-//           type="number"
-//           {...register('passing_score', { valueAsNumber: true })}
-//           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-//         />
-//         {errors.passing_score && <p className="text-red-500 text-sm">{errors.passing_score.message}</p>}
-//       </div>
-
-//       <div className="flex items-center">
-//         <input
-//           type="checkbox"
-//           {...register('active')}
-//           className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-//         />
-//         <label className="ml-2 block text-sm text-gray-900">Active</label>
-//       </div>
-
-//       <button
-//         type="submit"
-//         className="w-full bg-orange-600 text-white py-2 px-4 rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-//       >
-//         {initialData ? 'Update Exam' : 'Create Exam'}
-//       </button>
-//     </form>
-//   );
-// };
-
-// export default ExamForm;

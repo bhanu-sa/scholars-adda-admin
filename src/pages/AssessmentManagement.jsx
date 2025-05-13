@@ -14,7 +14,7 @@ const AssessmentManagement = () => {
 
   const handleCreateExam = async (examData) => {
     try {
-      // debugger
+   
       await createNewExam(examData);
       setShowForm(false);
     } catch (error) {
